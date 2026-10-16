@@ -69,8 +69,15 @@ def ext_of(path):
     return base
 
 
-def collect(repo, branch, since, until, pathspec):
-    """一次遍历, 同时收集: 作者总体统计 + 作者x后缀统计。"""
+def collect(repo, branch, since, until, pathspec, authors_filter=None):
+    """一次遍历, 同时收集: 作者总体统计 + 作者x后缀统计。
+
+    authors_filter: 白名单列表, 非空时只统计命中的作者。
+    """
+    def allowed(name):
+        if not authors_filter:
+            return True
+        return any(a == name or a.lower() in name.lower() for a in authors_filter)
     git_args = ["log", "--numstat", "--no-merges", "--format=%x00%an", branch]
     if since:
         git_args += ["--since", since]
@@ -90,8 +97,10 @@ def collect(repo, branch, since, until, pathspec):
             continue  # 作者行后的空行, 属于正常格式
         if line.startswith(FIELDS_SEP):
             current_author = line[len(FIELDS_SEP):].strip()
-            if current_author:
+            if current_author and allowed(current_author):
                 authors[current_author]["commits"] += 1
+            elif current_author:
+                current_author = None  # 非白名单作者, 忽略其后续 numstat
             continue
         if "\t" in line and current_author:
             parts = line.split("\t", 2)
@@ -323,13 +332,16 @@ def main():
     parser.add_argument("--since", help="起始时间, 如 2024-01-01")
     parser.add_argument("--until", help="结束时间, 如 2024-12-31")
     parser.add_argument("--path", help="只统计指定路径, 如 src/")
+    parser.add_argument("--authors", help="只统计指定作者, 逗号分隔, 如 'yangziwen,zhangyoujie'")
     parser.add_argument("--rank-by", choices=["insertions", "deletions", "net", "total"],
                         default="insertions", help="排名依据 (默认 insertions)")
     parser.add_argument("-o", "--output", help="输出 HTML 文件路径")
     args = parser.parse_args()
 
     repo = os.path.abspath(args.repo)
-    authors, exts = collect(repo, args.branch, args.since, args.until, args.path)
+    authors_filter = [a.strip() for a in args.authors.split(",")] if args.authors else None
+    authors, exts = collect(repo, args.branch, args.since, args.until, args.path,
+                            authors_filter)
     if not authors:
         print("未找到任何贡献记录，请检查仓库路径/分支/时间范围。")
         return

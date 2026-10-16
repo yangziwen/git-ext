@@ -111,6 +111,7 @@ Rank  Ext       Files  +Lines  -Lines  Net  insertions(%)
 
 ```bash
 git contrib-report /path/to/repo
+git contrib-report /path/to/repo --since 2026-01-01 --authors "alice,bob" -o report.html
 git contrib-report /path/to/repo -o report.html --rank-by net
 ```
 
@@ -118,6 +119,7 @@ git contrib-report /path/to/repo -o report.html --rank-by net
 |------|------|
 | `-o FILE` | 输出 HTML 路径，默认 `contrib_report_<仓库名>.html` |
 | `--rank-by` | 排名依据，柱状图/表格/饼图同步联动 |
+| `--authors` | 只统计指定作者（白名单），逗号分隔，如 `"yangziwen,zhangyoujie"`；支持子串/大小写不敏感匹配，非白名单作者的提交完全排除 |
 | `--branch` / `--since` / `--until` / `--path` | 同上 |
 
 > 报告数据在生成时静态嵌入，仓库有新提交后需重新执行刷新。
